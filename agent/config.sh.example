@@ -1,0 +1,2 @@
+# 본인의 Coolify 미들웨어 주소로 변경한 뒤 파일 이름을 config.sh 로 바꿔주세요.
+MIDDLEWARE_URL="https://your-actual-middleware-url.com/webhook/linux-log"
