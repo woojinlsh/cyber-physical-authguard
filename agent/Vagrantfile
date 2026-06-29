@@ -1,0 +1,19 @@
+Vagrant.configure("2") do |config|
+  # 데모에 사용할 안정적인 우분투 이미지 (2026년 기준 22.04 LTS가 매우 범용적입니다)
+  config.vm.box = "ubuntu/jammy64"
+  
+  # 가상머신의 호스트네임 설정
+  config.vm.hostname = "demo-target-server"
+
+  # 미들웨어와 통신할 수 있도록 고정 IP 할당 (대역은 본인 PC 환경에 맞게 조절 가능)
+  config.vm.network "private_network", ip: "192.168.56.10"
+
+  # VM 성능 설정 (데모용이므로 가볍게 1Core, 1GB RAM)
+  config.vm.provider "virtualbox" do |vb|
+    vb.memory = "1024"
+    vb.cpus = 1
+  end
+
+  # VM 생성 후 자동으로 실행할 쉘 스크립트 지정 (배포 자동화)
+  config.vm.provision "shell", path: "bootstrap.sh"
+end
