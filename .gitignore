@@ -1,0 +1,5 @@
+# Vagrant 자체 생성 파일 제외
+.vagrant/
+
+# 실제 설정 파일 제외 (보안 중요)
+config.sh
