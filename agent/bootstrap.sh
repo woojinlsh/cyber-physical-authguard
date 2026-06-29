@@ -1,12 +1,10 @@
 #!/bin/bash
 export DEBIAN_FRONTEND=noninteractive
 
-# Vagrant가 호스트 폴더를 마운트하는 내부 경로
 HOST_CONFIG="/vagrant/config.sh"
 
 echo "📁 0. 환경 설정 파일 로드 시도..."
 if [ -f "$HOST_CONFIG" ]; then
-    # 외부 설정 파일을 현재 쉘로 불러옵니다 (source)
     source "$HOST_CONFIG"
     echo "✅ 설정을 성공적으로 불러왔습니다. 목적지: $MIDDLEWARE_URL"
 else
@@ -23,21 +21,22 @@ echo "📂 2. 로그 시퍼(Log Shipper) 앱 배포 공간 생성..."
 mkdir -p /opt/log_shipper
 
 echo "📜 3. Python 에이전트 소스코드 작성..."
-cat << EOF > /opt/log_shipper/log_shipper.py
+# 작은따옴표('EOF')를 사용하여 내부 Python 변수($)가 Bash에 의해 깨지는 것을 방지합니다.
+cat << 'EOF' > /opt/log_shipper/log_shipper.py
 import time
 import os
 import re
 import requests
 
 LOG_FILE = "/var/log/auth.log"
-# 분리된 파일에서 가져온 변수가 여기에 자연스럽게 대입됩니다.
-MIDDLEWARE_URL = "${MIDDLEWARE_URL}"
+# Systemd 서비스 환경변수에서 URL을 읽어옵니다.
+MIDDLEWARE_URL = os.getenv("MIDDLEWARE_URL")
 
 opened_pattern = re.compile(r'(sshd|login)\[\d+\]: pam_unix\(\1:session\): session opened for user (\w+)')
 ssh_fail_pattern = re.compile(r'sshd\[\d+\]: Failed password for (?:invalid user )?(\w+) from')
 local_fail_pattern = re.compile(r'login\[\d+\]: FAILED LOGIN \(\d+\) on \'\S+\' FOR \'(\w+)\'')
 
-print("🚀 Linux Log Shipper 에이전트 시작...")
+print(f"🚀 Linux Log Shipper 에이전트 시작... 목적지: {MIDDLEWARE_URL}")
 
 try:
     with open(LOG_FILE, "r") as f:
@@ -79,15 +78,17 @@ try:
                     "timestamp_ms": int(time.time() * 1000)
                 }
                 try:
-                    requests.post(MIDDLEWARE_URL, json=payload, timeout=3)
+                    res = requests.post(MIDDLEWARE_URL, json=payload, timeout=3)
+                    print(f"[전송 성공] 유저: {user}, 상태: {status}, 응답 코드: {res.status_code}")
                 except Exception as e:
-                    print(f"전송 실패: {e}")
+                    print(f"[전송 실패] 에러: {e}")
 except Exception as e:
     print(f"오류 발생: {e}")
 EOF
 
 echo "⚙️ 4. 백그라운드 상시 구동을 위한 Systemd 서비스 등록..."
-cat << 'EOF' > /etc/systemd/system/log-shipper.service
+# 여기서는 Bash 변수인 ${MIDDLEWARE_URL}을 주입해야 하므로 따옴표 없는 EOF를 사용합니다.
+cat << EOF > /etc/systemd/system/log-shipper.service
 [Unit]
 Description=Linux Log Shipper for Verkada Demo
 After=network.target
@@ -95,6 +96,7 @@ After=network.target
 [Service]
 Type=simple
 User=root
+Environment="MIDDLEWARE_URL=${MIDDLEWARE_URL}"
 ExecStart=/usr/bin/python3 /opt/log_shipper/log_shipper.py
 Restart=always
 RestartSec=3
