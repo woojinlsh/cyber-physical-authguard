@@ -7,6 +7,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY main.py .
 
-EXPOSE 8000
+# 🔥 컨테이너 내부 노출 포트를 9001로 변경
+EXPOSE 9001
 
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+# 🔥 uvicorn 구동 포트를 9001로 변경
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "9001"]
